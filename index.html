@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>錄音</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <button @click="start" :disabled="isRecording">錄音</button>
+        <button @click="stop" :disabled="!isRecording">停止</button>
+        <button @click="play" :disabled="!isStopped">播放</button>
+        <button @click="download" :disabled="!isStopped">下載</button>
+    </div>
+
+    <script>
+        const app = new Vue({
+            el: "#app",
+            data: {
+                isRecording: false,
+                isStopped: false,
+                recordedChunks: [],
+                mediaRecorder: null,
+                audioURL: null,
+                audioBlob: null
+            },
+            methods: {
+                start() {
+                    navigator.mediaDevices.getUserMedia({ audio: true })
+                        .then((stream) => {
+                            this.recordedChunks = [];
+                            this.mediaRecorder = new MediaRecorder(stream);
+
+                            this.mediaRecorder.ondataavailable = (event) => {
+                                this.recordedChunks.push(event.data);
+                            };
+                            
+                            this.mediaRecorder.onstop = () => {
+                                this.audioBlob = new Blob(this.recordedChunks, { type: "audio/ogg" });
+                                this.audioURL = URL.createObjectURL(this.audioBlob);
+                                console.log(this.audioBlob)
+                                console.log(this.audioURL)
+                            };
+
+                            this.mediaRecorder.start();
+                            this.isRecording = true;
+                            this.isStopped = false;
+                        });
+                },
+
+                stop() {
+                    this.mediaRecorder.stop();
+                    this.isStopped = true;
+                    this.isRecording = false;
+                },
+
+                play() {
+                    const audio = new Audio(this.audioURL);
+                    audio.play();
+                },
+
+                download() {
+                    let timestamp = new Date().getTime();
+
+                    const a = document.createElement("a");
+                    a.href = this.audioURL;
+                    a.download = `${timestamp}.ogg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                },
+            }
+        });
+    </script>
+</body>
+
+</html>
